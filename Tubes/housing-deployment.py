@@ -12,7 +12,7 @@ import seaborn as sns
 import joblib
 
 # Load Dataset
-df = pd.read_csv('Tubes/Housing.csv')
+df = pd.read_csv('Housing.csv')
 
 # Data Cleaning and Transformation
 def preprocess_data(df_input):
@@ -31,6 +31,9 @@ def preprocess_data(df_input):
     # Normalize the 'price' column using MinMaxScaler
     scaler = MinMaxScaler()
     df_input['price'] = scaler.fit_transform(df_input[['price']])
+
+    # Save the scaler for later use
+    joblib.dump(scaler, 'scaler.pkl')
 
     # Select only relevant columns
     df_input = df_input[['price', 'area', 'stories', 'mainroad', 'airconditioning']]
@@ -114,6 +117,9 @@ if st.button("Predict Price"):
     # Load the model
     loaded_model = joblib.load('linear_regression_model.pkl')
 
+    # Load the scaler
+    scaler = joblib.load('scaler.pkl')
+
     # Preprocess input data
     input_data = pd.DataFrame([{
         'area': area,
@@ -122,9 +128,14 @@ if st.button("Predict Price"):
         'airconditioning': 1 if airconditioning == 'yes' else 0
     }])
 
-    # Predict the price
-    predicted_price = loaded_model.predict(input_data)
-    st.success(f"Predicted Price (normalized): {predicted_price[0]:.2f}")
+    # Predict the price (normalized)
+    predicted_price_normalized = loaded_model.predict(input_data)
+
+    # De-normalize the predicted price
+    predicted_price = scaler.inverse_transform([[predicted_price_normalized[0]]])[0][0]
+
+    # Display the result
+    st.success(f"Predicted Price (original scale): {predicted_price:.2f}")
 
 # Display Linear Regression metrics
 st.write(f"Linear Regression Model MSE: {mse_lr:.4f}")
